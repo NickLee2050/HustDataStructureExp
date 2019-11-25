@@ -73,6 +73,7 @@ Status PreOrderTraverse(btnode *head, Status visit(btnode *));
 Status InOrderTraverse(btnode *head, Status visit(btnode *));
 Status PostOrderTraverse(btnode *head, Status visit(btnode *));
 Status LevelOrderTraverse(btnode *head, Status visit(btnode *));
+Status SaveBiTrees(btm **index, FILE *DSS);
 Status visit(btnode *);
 Stack *InitStack(void)
 {
@@ -220,7 +221,7 @@ int main()
                     printf("WARNING: No Bi-Tree! Unable to do any manipulations! Create Bi-Trees FIRST!\n");
                     continue;
                 }
-                else
+                else if (mark < 15)
                 {
                     printf("Please input the Number of Bi-Tree in range [1, %d], end with <Enter>\n", tree_mk);
                     while (1)
@@ -339,11 +340,16 @@ int main()
             LevelOrderTraverse(index[idx_pos]->head, &visit);
             break;
         case 15:
-            for (int i = 1; i <= tree_mk; i++)
-                PreOrderTraverse(index[i]->head, &visit);
+        {
+            FILE *DSS = fopen("./BiTreeSave.txt", "w");
+            setbuf(DSS, NULL);
+            fflush(DSS);
+            if (SaveBiTrees(index, DSS))
+                printf("Saved.\n");
+            else
+                printf("Error.\n");
             break;
-        case 16:
-            break;
+        }
         }
     } while (mark);
     return 0;
@@ -431,7 +437,12 @@ Status CreateBiTree(btm **index, FILE *def)
         index[tree_mk]->head->lchild = NULL;
         index[tree_mk]->head->rchild = NULL;
         //Basic info & connection establishment
-        PreOrderCreate(index[tree_mk]->head, &(index[tree_mk]->count), def);
+        if (PreOrderCreate(index[tree_mk]->head, &(index[tree_mk]->count), def) == INFEASIBLE)
+        {
+            free(index[tree_mk]->head);
+            index[tree_mk]->head = NULL;
+            index[tree_mk]->count = 0;
+        }
     }
     return OK;
 }
@@ -697,6 +708,7 @@ Status PreOrderTraverse(btnode *head, Status visit(btnode *))
         }
     }
     printf("\n");
+    DestroyStack(bitr);
     return OK;
 }
 Status InOrderTraverse(btnode *head, Status visit(btnode *))
@@ -740,6 +752,41 @@ Status LevelOrderTraverse(btnode *head, Status visit(btnode *))
         }
     }
     printf("\n");
+    return OK;
+}
+Status SaveBiTrees(btm **index, FILE *DSS)
+{
+    if (!index || !tree_mk)
+        return ERROR;
+    Stack *bitr = InitStack();
+    for (int i = 1; i <= tree_mk; i++)
+    {
+        if (!index[i])
+            return ERROR;
+        if (BiTreeEmpty(index[i]))
+        {
+            fprintf(DSS, "^\n");
+            continue;
+        }
+        StackPush(bitr, index[i]->head);
+        btnode *tp = NULL;
+        while (bitr->top >= 0)
+        {
+            StackPop(bitr, &tp);
+            if (!tp)
+                fprintf(DSS, "^ ");
+            else
+                fprintf(DSS, "%u ", tp->data->ID);
+            if (tp)
+            {
+                StackPush(bitr, tp->rchild);
+                StackPush(bitr, tp->lchild);
+            }
+        }
+        fprintf(DSS, "\n");
+        ClearStack(bitr);
+    }
+    DestroyStack(bitr);
     return OK;
 }
 Status visit(btnode *node)
